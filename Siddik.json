@@ -1,0 +1,34 @@
+{
+  "author": "SK-SIDDIK",
+  "autoRestart": true,
+  "accpetPending": false,
+  "developermode": false,
+  "language": "en",
+  "notification": false,
+  "approval": false,
+  "banMsg": false,
+  "adminOnlyMsg": false,
+  "BOTNAME": "♡︎ 𝐒𝐊_𝐒𝐈𝐃𝐃𝐈𝐊_⓿❼ ♡︎",
+  "PREFIX": "/",
+  "OPERATOR": [
+    "100059026788061",
+    ""
+  ],
+  "ADMINBOT": [
+    "100059026788061",
+    "100001258002609"
+  ],
+  "reactUnsend": [
+    "😡",
+    "😾",
+    "👎",
+    "😠"
+  ],
+  "OWNER": ["100059026788061"], 
+  "APPROVED": [],
+  "disabledcmds": [],
+  "disabledevents": [],
+  "note": "make sure that the bot name you entered is all lowercase",
+  "notice": "dont cng author name and owner uid. otherwise bot not working",
+  "notice2": "if you run use email and password, use saveState false; otherwise, use saveState true"
+}
