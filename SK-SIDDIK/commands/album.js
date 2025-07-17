@@ -44,8 +44,8 @@ const PAGE_SIZE = 11;
 
 module.exports.config = {
   name: "album",
-  version: "1.0.0",
-  permisson: 0,
+  version: "1.0",
+  permission: 0,
   credits: "SK-SIDDIK-KHAN",
   description: "ভিডিও লিস্ট দেখুন এবং বেছে নিন",
   prefix: true,
@@ -53,67 +53,58 @@ module.exports.config = {
   cooldowns: 5
 };
 
-module.exports.run = async function ({ api, event, args }) {
+module.exports.run = async function({ api, event, args }) {
   const categoryKeys = Object.keys(categories);
   let page = 1;
 
-  if (args.length > 0) {
-    const inputPage = parseInt(args[0], 10);
-    if (!isNaN(inputPage) && inputPage > 0) {
-      page = inputPage;
-    }
+  if (args[0]) {
+    const inputPage = parseInt(args[0]);
+    if (!isNaN(inputPage) && inputPage > 0) page = inputPage;
   }
 
   const totalPages = Math.ceil(categoryKeys.length / PAGE_SIZE);
   if (page > totalPages) {
-    return api.sendMessage(`❌ Page ${page} doesn't exist. Total pages: ${totalPages}`, event.threadID, event.messageID);
+    return api.sendMessage(`❌ Page ${page} doesn't exist. Total pages: ${totalPages}`, event.threadID);
   }
 
   const startIndex = (page - 1) * PAGE_SIZE;
   const endIndex = startIndex + PAGE_SIZE;
-
-  const currentPageCategories = categoryKeys.slice(startIndex, endIndex);
+  const currentPage = categoryKeys.slice(startIndex, endIndex);
 
   const msg =
-    `╭╼|━♡𝐒𝐈𝐃𝐃𝐈𝐊-𝐁𝐎𝐓-𝟎𝟕♡━|╾╮\n\n` +
+    `╭╼|━♡𝐒𝐈𝐃𝐃𝐈𝐊-𝐁𝐎𝐓♡━|╾╮\n` +
     `আপনার পছন্দের ভিডিও দেখতে একটি নাম্বারে রিপ্লাই করুন:\n\n` +
-    `╰╼|━♡𝐒𝐈𝐃𝐃𝐈𝐊-𝐁𝐎𝐓-𝟎𝟕♡━|╾╯\n` +
-    `┏━━━━━━━━━━━━━━━━━┓\n` +
-    currentPageCategories
-      .map((cat, i) => `┣➤ ${startIndex + i + 1}. ${cat.toUpperCase()}`)
+    currentPage
+      .map((cat, index) => `┣➤ ${startIndex + index + 1}. ${cat.toUpperCase()}`)
       .join("\n") +
-    `\n┗━━━━[𝗦𝗜𝗗𝗗𝗜𝗞-𝗕𝗢𝗧]━━━━┛\n` +
-    `\n☽━━━━━━━━━━━━━━━━━━☾\n           🔰 | 𝐏𝐚𝐠𝐞 [ ${page} / ${totalPages} ] 🔰\n☽━━━━━━━━━━━━━━━━━━☾`;
+    `\n\n🔰 Page ${page}/${totalPages}`;
 
-  api.sendMessage({ body: msg }, event.threadID, (err, replyMsg) => {
+  api.sendMessage(msg, event.threadID, (err, info) => {
     if (err) return;
-    global.GoatBot.onReply.set(replyMsg.messageID, {
-      commandName: "album",
-      messageID: replyMsg.messageID,
+    global.client.handleReply.push({
+      name: this.config.name,
+      messageID: info.messageID,
       author: event.senderID,
-      type: "selectCategory",
+      type: "categorySelect",
+      categoryKeys
     });
-
-    setTimeout(() => {
-      api.unsendMessage(replyMsg.messageID).catch(() => {});
-    }, 30000);
-  }, event.messageID);
+  });
 };
 
-module.exports.onReply = async function ({ api, event, Reply }) {
-  if (Reply.author !== event.senderID) {
-    return api.sendMessage("⚠️ You are not authorized to reply to this option", event.threadID, event.messageID);
-  }
+module.exports.handleReply = async function({ api, event, handleReply }) {
+  if (event.senderID !== handleReply.author)
+    return api.sendMessage("⚠️ You are not allowed to reply to this.", event.threadID, event.messageID);
 
-  const categoryKeys = Object.keys(categories);
   const num = parseInt(event.body.trim());
+  const categoryKeys = handleReply.categoryKeys;
 
   if (isNaN(num) || num < 1 || num > categoryKeys.length) {
-    return api.sendMessage("❌ Invalid input. Please enter a valid number", event.threadID, event.messageID);
+    return api.sendMessage("❌ Invalid number. Try again.", event.threadID, event.messageID);
   }
 
   const category = categoryKeys[num - 1];
-  const videoURL = categories[category][Math.floor(Math.random() * categories[category].length)];
+  const videoList = categories[category];
+  const videoURL = videoList[Math.floor(Math.random() * videoList.length)];
   const fileName = path.basename(videoURL);
   const filePath = path.join(__dirname, "cache", "album", fileName);
 
@@ -121,7 +112,7 @@ module.exports.onReply = async function ({ api, event, Reply }) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
   }
 
-  const loadingMsg = await api.sendMessage(`⏳ Loading ${category.toUpperCase()}`, event.threadID);
+  const loadingMsg = await api.sendMessage(`⏳ Downloading ${category}...`, event.threadID);
 
   try {
     if (!fs.existsSync(filePath)) {
@@ -129,28 +120,26 @@ module.exports.onReply = async function ({ api, event, Reply }) {
     }
 
     await api.sendMessage({
-      body: `✅ Here's Your ${category.toUpperCase()}`,
-      attachment: fs.createReadStream(filePath),
+      body: `✅ Here's your ${category.toUpperCase()}`,
+      attachment: fs.createReadStream(filePath)
     }, event.threadID, () => {
       api.unsendMessage(loadingMsg.messageID);
     });
   } catch (err) {
     console.error(err);
-    api.sendMessage("❌ Failed to load video", event.threadID);
+    api.sendMessage("❌ Could not load video.", event.threadID);
   }
 };
 
 function downloadFile(filePath, url) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(filePath);
-    https
-      .get(url, (res) => {
-        res.pipe(file);
-        file.on("finish", () => file.close(resolve));
-      })
-      .on("error", (err) => {
-        fs.unlink(filePath, () => {});
-        reject(err);
-      });
+    https.get(url, (res) => {
+      res.pipe(file);
+      file.on("finish", () => file.close(resolve));
+    }).on("error", (err) => {
+      fs.unlink(filePath, () => {});
+      reject(err);
+    });
   });
 }
